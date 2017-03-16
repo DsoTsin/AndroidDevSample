@@ -1,0 +1,104 @@
+apply plugin: 'com.android.model.application'
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    testCompile 'junit:junit:4.12'
+    compile 'com.android.support:appcompat-v7:23.2.1'
+}
+
+def v8Dir = '../v8'
+/**
+ * Note: v8-5.3.329
+ * Build This V8 need ndk-r11c
+ * you need modify "AR" in Makefile.android_arm.release file
+ * and add standalone_static_library : 1 in gyp files.
+ * This build disabled snapshot and i18n support
+ */
+model {
+
+    repositories {
+        libs(PrebuiltLibraries) {
+            v8 {
+                headers.srcDir "${v8Dir}/include"
+                binaries.withType(SharedLibraryBinary) {
+                    sharedLibraryFile = file("${v8Dir}/libs/armeabi-v7a/libv8rt.so")
+                }
+            }
+        }
+    }
+
+    android {
+        compileSdkVersion = "android-23"
+        buildToolsVersion = "23.0.2"
+
+        defaultConfig.with {
+            applicationId = "com.tencent.hellov8"
+            minSdkVersion.apiLevel = 19
+            targetSdkVersion.apiLevel = 23
+            versionCode = 1
+            versionName = "0.0.1"
+        }
+
+        compileOptions.with {
+            sourceCompatibility=JavaVersion.VERSION_1_7
+            targetCompatibility=JavaVersion.VERSION_1_7
+        }
+
+    }
+
+    android.ndk {
+        moduleName = "hellov8"
+        cppFlags.add("-std=c++11")
+        toolchain = "gcc"
+        stl = "c++_static"
+        ldLibs.addAll(["log", "android"])
+        cppFlags.add("-D __ANDROID__=1")
+        cppFlags.add("-fexceptions")
+        cppFlags.add("-D__ARM_NEON=1")
+        cppFlags.add("-I${file("${v8Dir}/include")}".toString())
+        debuggable = true
+    }
+
+    android.abis {
+        create("armeabi-v7a") {
+            cppFlags.addAll(["-DHAVE_NEON", "-mfloat-abi=softfp", "-mfpu=neon", "-march=armv7-a"])
+            ldLibs.add("m_hard")
+            ldFlags.add("-Wl,--no-warn-mismatch")
+            ldFlags.add("-L${file("${v8Dir}/libs/armeabi-v7a")}".toString())
+            ldLibs.add("v8rt")
+//            ldLibs.add("${file("${v8Dir}/libs/armeabi-v7a/libv8_libplatform.a")}".toString())
+//            ldLibs.add("${file("${v8Dir}/libs/armeabi-v7a/libv8_base.a")}".toString())
+//            ldLibs.add("${file("${v8Dir}/libs/armeabi-v7a/libv8_libbase.a")}".toString())
+//            ldLibs.add("${file("${v8Dir}/libs/armeabi-v7a/libv8_libsampler.a")}".toString())
+//            ldLibs.add("${file("${v8Dir}/libs/armeabi-v7a/libv8_nosnapshot.a")}".toString())
+//            ldLibs.add("${file("${v8Dir}/libs/armeabi-v7a/libicui18n.a")}".toString())
+//            ldLibs.add("${file("${v8Dir}/libs/armeabi-v7a/libicuuc.a")}".toString())
+            ldLibs.add("c++_static")
+        }
+    }
+
+    android.sources {
+        main {
+            jni {
+                dependencies {
+                    library 'v8' linkage 'shared'
+                }
+                source {
+                    srcDir 'jni'
+                }
+            }
+            jniLibs {
+                source {
+                    srcDir "${v8Dir}/libs"
+                }
+            }
+        }
+    }
+
+    android.productFlavors {
+        create("all") {
+            ndk.abiFilters.add("armeabi-v7a")
+            // ndk.abiFilters.add("arm64-v8a")
+        }
+    }
+}

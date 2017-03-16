@@ -1,0 +1,66 @@
+apply plugin: 'com.android.model.application'
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    testCompile 'junit:junit:4.12'
+    compile 'com.android.support:appcompat-v7:23.2.1'
+}
+
+
+model {
+    android {
+        compileSdkVersion = "android-23"
+        buildToolsVersion = "23.0.2"
+
+        defaultConfig.with {
+            applicationId = "com.tencent.helloneon"
+            minSdkVersion.apiLevel = 19
+            targetSdkVersion.apiLevel = 23
+            versionCode = 1
+            versionName = "0.0.1"
+        }
+
+        compileOptions.with {
+            sourceCompatibility=JavaVersion.VERSION_1_7
+            targetCompatibility=JavaVersion.VERSION_1_7
+        }
+
+    }
+
+    android.ndk {
+        moduleName = "neon"
+        cppFlags.add("-std=c++14")
+        toolchain = "clang"
+        stl = "c++_static"
+        ldLibs.addAll(["log", "android"])
+        cppFlags.add("-D __ANDROID__=1")
+        cppFlags.add("-fexceptions")
+        cppFlags.add("-D__ARM_NEON=1")
+        cppFlags.add("-O3")
+    }
+
+    android.abis {
+        create("armeabi-v7a") {
+            cppFlags.addAll(["-DHAVE_NEON", "-mfloat-abi=softfp", "-mfpu=neon", "-march=armv7-a"])
+            ldLibs.add("m_hard")
+            ldFlags.add("-Wl,--no-warn-mismatch")
+        }
+    }
+
+    android.sources {
+        main {
+            jni {
+                source {
+                    srcDir 'jni'
+                }
+            }
+        }
+    }
+
+    android.productFlavors {
+        create("all") {
+            ndk.abiFilters.add("armeabi-v7a")
+            // ndk.abiFilters.add("arm64-v8a")
+        }
+    }
+}
